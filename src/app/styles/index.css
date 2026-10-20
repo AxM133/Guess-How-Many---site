@@ -1,0 +1,84 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Unbounded', 'Manrope', ui-sans-serif, sans-serif;
+
+  --color-ink-950: #07061a;
+  --color-ink-900: #0b0a24;
+  --color-ink-800: #14123a;
+  --color-ink-700: #1e1a5c;
+  --color-ink-600: #2c2780;
+  --color-alif: #22c9d1;
+  --color-alif-soft: #67e8f9;
+
+  --animate-blob: blob 18s ease-in-out infinite;
+  --animate-shine: shine 3.5s linear infinite;
+
+  @keyframes blob {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(6%, -8%) scale(1.12);
+    }
+    66% {
+      transform: translate(-6%, 6%) scale(0.92);
+    }
+  }
+  @keyframes shine {
+    to {
+      background-position: 200% center;
+    }
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-ink-950 font-sans text-white antialiased;
+  }
+  ::selection {
+    @apply bg-alif/40;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply border border-white/10 bg-white/[0.04] shadow-2xl shadow-black/40 backdrop-blur-xl;
+  }
+  .text-shine {
+    background: linear-gradient(90deg, #67e8f9, #ffffff, #a78bfa, #67e8f9);
+    background-size: 200% auto;
+    @apply animate-shine bg-clip-text text-transparent;
+  }
+  .field {
+    @apply w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3.5 text-base text-white outline-none transition placeholder:text-white/30 focus:border-alif/70 focus:bg-white/[0.08] focus:ring-4 focus:ring-alif/15 disabled:opacity-50;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-semibold transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-gradient-to-r from-cyan-400 to-sky-500 text-ink-950 shadow-lg shadow-cyan-500/25 hover:brightness-110;
+  }
+  .btn-ghost {
+    @apply border border-white/10 bg-white/5 text-white hover:bg-white/10;
+  }
+  .btn-danger {
+    @apply border border-rose-400/30 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20;
+  }
+}
+
+/* Скрываем стрелки у числовых полей */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
