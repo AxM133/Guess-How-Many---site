@@ -1,20 +1,27 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Banknote, CheckCircle2, Loader2, Phone, Send, User } from 'lucide-react'
+import { Banknote, CheckCircle2, Loader2, Send, User } from 'lucide-react'
 import { dropNotes } from '@/entities/donation-box'
 import { contestApi } from '@/shared/api'
-import { formatMoney, formatPhone } from '@/shared/lib'
+import { formatMoney } from '@/shared/lib'
 import { Field } from '@/shared/ui'
 import { celebrate } from '../lib/celebrate'
 import { readMyGuess, saveMyGuess } from '../lib/myGuess'
+import { useVerification } from '../model/useVerification'
+import { PhoneVerification } from './PhoneVerification'
 
 export function SubmitGuessForm({ contest, onSubmitted }) {
   const running = contest?.status === 'running'
   const [mine, setMine] = useState(() => (contest ? readMyGuess(contest.startsAt) : null))
   const [name, setName] = useState('')
-  const [phone, setPhone] = useState('+992 ')
-  const [amount, setAmount] = useState('')
   const [error, setError] = useState(null)
+  // Имя из Telegram подставляем, только если человек ещё ничего не ввёл
+  const prefillName = useCallback((tgName) => {
+    setError(null)
+    if (tgName) setName((cur) => (cur.trim() ? cur : tgName))
+  }, [])
+  const verification = useVerification({ onVerified: prefillName })
+  const [amount, setAmount] = useState('')
   const [sending, setSending] = useState(false)
 
   // Если админ запустил новый конкурс — сбрасываем «уже ответил»
@@ -30,18 +37,20 @@ export function SubmitGuessForm({ contest, onSubmitted }) {
     e.preventDefault()
     setError(null)
     if (name.trim().length < 2) return setError('Как вас зовут?')
-    if (phone.replace(/\D/g, '').length !== 12) return setError('Введите номер полностью: +992 XX XXX XX XX')
     if (!digits) return setError('Сколько, по-вашему, денег в коробке?')
+    if (verification.status !== 'verified') return setError('Подтвердите номер телефона через Telegram')
 
     setSending(true)
     try {
-      await contestApi.submitGuess({ name: name.trim(), phone, amount: Number(digits) })
+      await contestApi.submitGuess({ token: verification.token, name: name.trim(), amount: Number(digits) })
       setMine(saveMyGuess({ startsAt: contest.startsAt, name: name.trim(), amount: Number(digits) }))
+      verification.reset() // подтверждение одноразовое и уже потрачено
       celebrate()
       dropNotes(4)
       onSubmitted?.()
     } catch (err) {
       setError(err.message)
+      if (err.code === 'VERIFY_AGAIN') verification.reset()
     } finally {
       setSending(false)
     }
@@ -74,7 +83,7 @@ export function SubmitGuessForm({ contest, onSubmitted }) {
             </p>
             <p className="mx-auto mt-5 max-w-sm text-sm text-white/50">
               Дождитесь окончания отсчёта — результаты появятся на этой странице. Победителю позвонят по
-              указанному номеру.
+              подтверждённому номеру.
             </p>
           </motion.div>
         ) : (
@@ -103,7 +112,10 @@ export function SubmitGuessForm({ contest, onSubmitted }) {
                 inputMode="numeric"
                 placeholder="0"
                 value={digits ? formatMoney(Number(digits)) : ''}
-                onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                onChange={(e) => {
+                  setError(null)
+                  setAmount(e.target.value.replace(/\D/g, '').slice(0, 8))
+                }}
                 disabled={!running || sending}
               />
               <span className="pointer-events-none absolute top-1/2 right-5 -translate-y-1/2 font-semibold text-white/40">
@@ -111,29 +123,22 @@ export function SubmitGuessForm({ contest, onSubmitted }) {
               </span>
             </Field>
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field icon={User} label="Имя">
-                <input
-                  className="field pl-12"
-                  placeholder="Как к вам обращаться"
-                  autoComplete="name"
-                  maxLength={60}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={!running || sending}
-                />
-              </Field>
-              <Field icon={Phone} label="Телефон" hint="Позвоним, если вы победите">
-                <input
-                  className="field pl-12 tabular-nums"
-                  type="tel"
-                  autoComplete="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(formatPhone(e.target.value))}
-                  disabled={!running || sending}
-                />
-              </Field>
-            </div>
+            <Field icon={User} label="Имя" hint="Так вас объявят, если вы победите">
+              <input
+                className="field pl-12"
+                placeholder="Как к вам обращаться"
+                autoComplete="name"
+                maxLength={60}
+                value={name}
+                onChange={(e) => {
+                  setError(null)
+                  setName(e.target.value)
+                }}
+                disabled={!running || sending}
+              />
+            </Field>
+
+            <PhoneVerification verification={verification} disabled={!running || sending} />
 
             <AnimatePresence>
               {error && (

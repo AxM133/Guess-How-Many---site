@@ -13,22 +13,22 @@ export async function countGuesses(round) {
 }
 
 export const listGuesses = (round) =>
-  query('SELECT id, name, phone, amount, created_at FROM guesses WHERE round = $1 ORDER BY created_at DESC', [round])
+  query(
+    'SELECT id, name, phone, amount, created_at, tg_username FROM guesses WHERE round = $1 ORDER BY created_at DESC',
+    [round],
+  )
 
 export async function countRecentFromIp(ip, sinceMs) {
   const [{ n }] = await query('SELECT COUNT(*)::int AS n FROM guesses WHERE ip = $1 AND created_at > $2', [ip, sinceMs])
   return n
 }
 
-export const insertGuess = ({ round, name, phone, amount, ip }) =>
-  query('INSERT INTO guesses (round, name, phone, amount, created_at, ip) VALUES ($1, $2, $3, $4, $5, $6)', [
-    round,
-    name,
-    phone,
-    amount,
-    Date.now(),
-    ip,
-  ])
+export const insertGuess = ({ round, name, phone, amount, ip, tgUserId, tgUsername }) =>
+  query(
+    `INSERT INTO guesses (round, name, phone, amount, created_at, ip, tg_user_id, tg_username)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [round, name, phone, amount, Date.now(), ip, tgUserId, tgUsername],
+  )
 
 export const removeGuess = (id, round) => query('DELETE FROM guesses WHERE id = $1 AND round = $2', [id, round])
 export const setTimer = (startsAt, endsAt) =>

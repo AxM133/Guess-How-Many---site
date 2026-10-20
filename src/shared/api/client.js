@@ -1,9 +1,10 @@
 import { adminSession } from './session'
 
 export class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, code) {
     super(message)
     this.status = status
+    this.code = code // машиночитаемая причина, например VERIFY_AGAIN
   }
 }
 
@@ -29,7 +30,7 @@ async function send(path, { method = 'GET', body, admin = false } = {}) {
 export async function request(path, options) {
   const res = await send(path, options)
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new ApiError(data.error || 'Что-то пошло не так', res.status)
+  if (!res.ok) throw new ApiError(data.error || 'Что-то пошло не так', res.status, data.code)
   return data
 }
 

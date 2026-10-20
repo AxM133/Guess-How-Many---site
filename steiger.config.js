@@ -11,4 +11,9 @@ export default defineConfig([
       'fsd/insignificant-slice': 'off',
     },
   },
+  {
+    // Разделы страниц (pages/*/section/<раздел>) устроены как мини-слайсы со своими ui/ и model/
+    files: ['./src/pages/*/section/**'],
+    rules: { 'fsd/no-reserved-folder-names': 'off' },
+  },
 ])

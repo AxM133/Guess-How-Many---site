@@ -28,6 +28,41 @@ const SCHEMA = [
     UNIQUE (round, phone)
   )`,
   `CREATE INDEX IF NOT EXISTS guesses_ip_created_idx ON guesses (ip, created_at)`,
+  // Один Telegram-аккаунт — один ответ за раунд (старые строки без tg_user_id не мешают: NULL не уникален)
+  `ALTER TABLE guesses ADD COLUMN IF NOT EXISTS tg_user_id TEXT`,
+  `ALTER TABLE guesses ADD COLUMN IF NOT EXISTS tg_username TEXT`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS guesses_round_tg_idx ON guesses (round, tg_user_id)`,
+  // Подтверждение номера через Telegram-бота
+  `CREATE TABLE IF NOT EXISTS verifications (
+    token       TEXT PRIMARY KEY,
+    start_code  TEXT UNIQUE NOT NULL,
+    ip          TEXT,
+    created_at  DOUBLE PRECISION NOT NULL,
+    tg_user_id  TEXT,
+    tg_username TEXT,
+    tg_name     TEXT,
+    phone       TEXT,
+    verified_at DOUBLE PRECISION,
+    used_at     DOUBLE PRECISION
+  )`,
+  `CREATE INDEX IF NOT EXISTS verifications_tg_idx ON verifications (tg_user_id, created_at)`,
+  `CREATE INDEX IF NOT EXISTS verifications_ip_idx ON verifications (ip, created_at)`,
+  // Неудачные попытки входа в админку — общие для всех экземпляров сервера
+  `CREATE TABLE IF NOT EXISTS auth_failures (
+    id   SERIAL PRIMARY KEY,
+    ip   TEXT,
+    kind TEXT NOT NULL,
+    at   DOUBLE PRECISION NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS auth_failures_kind_at_idx ON auth_failures (kind, at)`,
+  // Одноразовые коды входа, которые бот присылает админу
+  `CREATE TABLE IF NOT EXISTS admin_challenges (
+    id         TEXT PRIMARY KEY,
+    code_hash  TEXT NOT NULL,
+    created_at DOUBLE PRECISION NOT NULL,
+    attempts   INT NOT NULL DEFAULT 0,
+    used       BOOLEAN NOT NULL DEFAULT FALSE
+  )`,
 ]
 
 async function connect() {

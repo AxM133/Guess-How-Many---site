@@ -1,14 +1,17 @@
 import { Loader2 } from 'lucide-react'
 import { LoginForm, useAdminAuth } from '@/features/admin-auth'
-import { AdminHeader } from '@/widgets/admin-header'
-import { ContestStats } from '@/widgets/contest-stats'
-import { GuessesTable } from '@/widgets/guesses-table'
-import { NewRoundPanel } from '@/widgets/new-round-panel'
-import { ResultPanel } from '@/widgets/result-panel'
-import { TimerPanel } from '@/widgets/timer-panel'
-import { useToast } from '@/shared/lib'
+import { Footer } from '@/widgets/footer'
+import { Header } from '@/widgets/header'
+import { formatMoney, plural, useToast } from '@/shared/lib'
 import { Toast } from '@/shared/ui'
 import { useAdminDashboard } from '../model/useAdminDashboard'
+import { GuessesSection } from '../section/guesses'
+import { NewRoundSection } from '../section/new-round'
+import { ResultsSection } from '../section/results'
+import { StatsSection } from '../section/stats'
+import { TelegramSection } from '../section/telegram'
+import { TimerSection } from '../section/timer'
+import { HeaderActions } from './HeaderActions'
 
 function Dashboard({ onLogout }) {
   const [toast, notify] = useToast()
@@ -24,16 +27,23 @@ function Dashboard({ onLogout }) {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#1a1752,#07061a_60%)]">
-      <AdminHeader round={state.round} participants={state.participants} onRefresh={() => run(load)} onLogout={onLogout} />
+      <Header
+        sticky
+        title="Угадай сумму · админка"
+        subtitle={`Раунд ${state.round} · ${formatMoney(state.participants)} ${plural(state.participants, ['участник', 'участника', 'участников'])}`}
+        actions={<HeaderActions onRefresh={() => run(load)} onLogout={onLogout} />}
+      />
       <main className="mx-auto grid max-w-7xl gap-5 px-4 py-8 sm:px-8">
-        <ContestStats guesses={state.guesses} />
+        <StatsSection guesses={state.guesses} />
         <div className="grid gap-5 lg:grid-cols-2">
-          <TimerPanel key={state.round} state={state} now={now} run={run} />
-          <ResultPanel state={state} run={run} />
+          <TimerSection key={state.round} state={state} now={now} run={run} />
+          <ResultsSection state={state} run={run} />
         </div>
-        <GuessesTable state={state} run={run} />
-        <NewRoundPanel run={run} />
+        <GuessesSection state={state} run={run} />
+        <TelegramSection run={run} />
+        <NewRoundSection state={state} run={run} />
       </main>
+      <Footer />
       <Toast toast={toast} />
     </div>
   )
@@ -43,8 +53,12 @@ export default function AdminPage() {
   const { authed, login, logout } = useAdminAuth()
   if (authed) return <Dashboard onLogout={logout} />
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,#1e1a5c,#07061a_70%)] p-4">
-      <LoginForm onLogin={login} />
+    <div className="flex min-h-screen flex-col bg-[radial-gradient(ellipse_at_top,#1e1a5c,#07061a_70%)]">
+      <Header />
+      <main className="flex flex-1 items-center justify-center p-4">
+        <LoginForm onLogin={login} />
+      </main>
+      <Footer />
     </div>
   )
 }
